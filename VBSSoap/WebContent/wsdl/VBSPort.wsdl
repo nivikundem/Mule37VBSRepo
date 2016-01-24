@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://www.nivi.com/VBSWS/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="VBSWS" targetNamespace="http://www.nivi.com/VBSWS/">
+  <wsdl:types>
+    <xsd:schema targetNamespace="http://www.nivi.com/VBSWS/">
+      <xsd:element name="sendVBSDetails">
+          	
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="VBLoad" type="tns:vbLoadType"/>
+		  </xsd:sequence>
+        </xsd:complexType> 
+      </xsd:element>
+      
+      <xsd:complexType name="vbLoadType">
+		<xsd:sequence>
+			<xsd:element name="DateGenerated" type="xsd:string"/>
+			<xsd:element name="VBLoadList" type="tns:vbLoadListType"/>			
+		</xsd:sequence>
+	  </xsd:complexType>
+      
+       <xsd:complexType name="vbLoadListType">
+		<xsd:sequence>
+			<xsd:element name="VB" type="tns:vbType"/>			
+		</xsd:sequence>		
+	  </xsd:complexType>
+      
+       <xsd:complexType name="vbType">
+		<xsd:sequence>		    
+			<xsd:element name="VRN" type="xsd:string"/>
+			<xsd:element name="DateBooked" type="xsd:string"/>
+			<xsd:element name="TimeBooked" type="xsd:string"/>
+			<xsd:element name="Amount" type="xsd:string"/>
+			<xsd:element name="Source" type="xsd:string"/>
+			<xsd:element name="Target" type="xsd:string"/>
+		</xsd:sequence>
+		<xsd:attribute name="VBR" type="xsd:string"/>
+	  </xsd:complexType>      
+      
+      
+      <xsd:element name="sendVBSDetailsResponse" type="tns:output">
+       </xsd:element>
+    
+      <xsd:complexType name="output">
+      	<xsd:sequence>      		
+      		<xsd:element maxOccurs="1" minOccurs="0" name="vbsDetailsResponse" type="tns:vbsDetailsType">
+      		</xsd:element>
+      	</xsd:sequence>
+      </xsd:complexType>
+    
+	   <xsd:complexType name="vbsDetailsType">
+		<xsd:sequence>
+			<xsd:element name="VRN" type="xsd:string"/>
+			<xsd:element name="status" type="xsd:string"/>
+		</xsd:sequence>
+	  </xsd:complexType>
+	    
+		
+		<!-- 2nd method starts here -->
+		
+		
+		
+		
+		
+		
+		 <xsd:element name="getVBSDetails">
+          	
+        <xsd:complexType>
+          <xsd:sequence>
+            
+		  </xsd:sequence>
+        </xsd:complexType> 
+      </xsd:element>
+      
+   
+      
+      <xsd:element name="getVBSDetailsResponse" type="tns:output2">
+       </xsd:element>
+    
+      <xsd:complexType name="output2">
+      	<xsd:sequence>      		
+      		<xsd:element maxOccurs="1" minOccurs="0" name="VBLoad" type="tns:getDetailsType"/>
+      	
+      	</xsd:sequence>
+      </xsd:complexType>
+    
+	 
+		
+		
+		
+		
+		
+		 <xsd:complexType name="getDetailsType">
+		<xsd:sequence>
+			<xsd:element name="DateGenerated" type="xsd:string"/>
+			<xsd:element name="VBLoadList" type="tns:vbLoadListTypeIn"/>			
+		</xsd:sequence>
+	  </xsd:complexType>
+      
+       <xsd:complexType name="vbLoadListTypeIn">
+		<xsd:sequence>
+			<xsd:element name="VB" type="tns:vbTypeIn"/>			
+		</xsd:sequence>		
+	  </xsd:complexType>
+      
+       <xsd:complexType name="vbTypeIn">
+		<xsd:sequence>		    
+			<xsd:element name="VRN" type="xsd:string"/>
+			<xsd:element name="DateBooked" type="xsd:string"/>
+			<xsd:element name="TimeBooked" type="xsd:string"/>
+			<xsd:element name="Amount" type="xsd:string"/>			
+		</xsd:sequence>
+		<xsd:attribute name="VBR" type="xsd:string"/>
+	  </xsd:complexType>      
+		
+		<!-- 2nd method ends here -->
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	  
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="sendVBSDetails">
+    <wsdl:part element="tns:sendVBSDetails" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="sendVBSDetailsResponse">
+    <wsdl:part element="tns:sendVBSDetailsResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  
+  
+  <wsdl:message name="getVBSDetails">
+    <wsdl:part element="tns:getVBSDetails" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="getVBSDetailsResponse">
+    <wsdl:part element="tns:getVBSDetailsResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  
+  
+  
+  
+  
+  <wsdl:portType name="VBSWS">
+    <wsdl:operation name="sendVBSDetails">
+      <wsdl:input message="tns:sendVBSDetails">
+    </wsdl:input>
+      <wsdl:output message="tns:sendVBSDetailsResponse">
+    </wsdl:output>
+    </wsdl:operation>
+	
+	 <wsdl:operation name="getVBSDetails">
+      <wsdl:input message="tns:getVBSDetails">
+    </wsdl:input>
+      <wsdl:output message="tns:getVBSDetailsResponse">
+    </wsdl:output>
+    </wsdl:operation>
+	
+	
+  </wsdl:portType>
+  <wsdl:binding name="VBSSOAP" type="tns:VBSWS">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="sendVBSDetails">
+      <soap:operation soapAction="urn:SendVBSDetails"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+	
+	
+	
+	  <wsdl:operation name="getVBSDetails">
+      <soap:operation soapAction="urn:GetVBSDetails"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+	
+	
+	
+	
+	
+  </wsdl:binding>
+  <wsdl:service name="VBSWS">
+    <wsdl:port binding="tns:VBSSOAP" name="VBSPort">
+      <soap:address location="http://localhost:8080/VBSSoap/services/VBSPort"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

@@ -1,0 +1,82 @@
+<!-- Use this file to deploy some handlers/chains and services      -->
+<!-- Two ways to do this:                                           -->
+<!--   java org.apache.axis.client.AdminClient deploy.wsdd          -->
+<!--      after the axis server is running                          -->
+<!-- or                                                             -->
+<!--   java org.apache.axis.utils.Admin client|server deploy.wsdd   -->
+<!--      from the same directory that the Axis engine runs         -->
+
+<deployment
+    xmlns="http://xml.apache.org/axis/wsdd/"
+    xmlns:java="http://xml.apache.org/axis/wsdd/providers/java">
+
+  <!-- Services from VBSWS WSDL service -->
+
+  <service name="VBSPort" provider="java:RPC" style="wrapped" use="literal">
+      <parameter name="wsdlTargetNamespace" value="http://www.nivi.com/VBSWS/"/>
+      <parameter name="wsdlServiceElement" value="VBSWS"/>
+      <parameter name="schemaUnqualified" value="http://www.nivi.com/VBSWS/"/>
+      <parameter name="wsdlServicePort" value="VBSPort"/>
+      <parameter name="className" value="com.nivi.www.VBSWS.VBSSOAPSkeleton"/>
+      <parameter name="wsdlPortType" value="VBSWS"/>
+      <parameter name="typeMappingVersion" value="1.2"/>
+      <parameter name="allowedMethods" value="*"/>
+
+      <typeMapping
+        xmlns:ns="http://www.nivi.com/VBSWS/"
+        qname="ns:getDetailsType"
+        type="java:com.nivi.www.VBSWS.GetDetailsType"
+        serializer="org.apache.axis.encoding.ser.BeanSerializerFactory"
+        deserializer="org.apache.axis.encoding.ser.BeanDeserializerFactory"
+        encodingStyle=""
+      />
+      <typeMapping
+        xmlns:ns="http://www.nivi.com/VBSWS/"
+        qname="ns:vbLoadListType"
+        type="java:com.nivi.www.VBSWS.VbLoadListType"
+        serializer="org.apache.axis.encoding.ser.BeanSerializerFactory"
+        deserializer="org.apache.axis.encoding.ser.BeanDeserializerFactory"
+        encodingStyle=""
+      />
+      <typeMapping
+        xmlns:ns="http://www.nivi.com/VBSWS/"
+        qname="ns:vbLoadType"
+        type="java:com.nivi.www.VBSWS.VbLoadType"
+        serializer="org.apache.axis.encoding.ser.BeanSerializerFactory"
+        deserializer="org.apache.axis.encoding.ser.BeanDeserializerFactory"
+        encodingStyle=""
+      />
+      <typeMapping
+        xmlns:ns="http://www.nivi.com/VBSWS/"
+        qname="ns:vbTypeIn"
+        type="java:com.nivi.www.VBSWS.VbTypeIn"
+        serializer="org.apache.axis.encoding.ser.BeanSerializerFactory"
+        deserializer="org.apache.axis.encoding.ser.BeanDeserializerFactory"
+        encodingStyle=""
+      />
+      <typeMapping
+        xmlns:ns="http://www.nivi.com/VBSWS/"
+        qname="ns:vbLoadListTypeIn"
+        type="java:com.nivi.www.VBSWS.VbLoadListTypeIn"
+        serializer="org.apache.axis.encoding.ser.BeanSerializerFactory"
+        deserializer="org.apache.axis.encoding.ser.BeanDeserializerFactory"
+        encodingStyle=""
+      />
+      <typeMapping
+        xmlns:ns="http://www.nivi.com/VBSWS/"
+        qname="ns:vbsDetailsType"
+        type="java:com.nivi.www.VBSWS.VbsDetailsType"
+        serializer="org.apache.axis.encoding.ser.BeanSerializerFactory"
+        deserializer="org.apache.axis.encoding.ser.BeanDeserializerFactory"
+        encodingStyle=""
+      />
+      <typeMapping
+        xmlns:ns="http://www.nivi.com/VBSWS/"
+        qname="ns:vbType"
+        type="java:com.nivi.www.VBSWS.VbType"
+        serializer="org.apache.axis.encoding.ser.BeanSerializerFactory"
+        deserializer="org.apache.axis.encoding.ser.BeanDeserializerFactory"
+        encodingStyle=""
+      />
+  </service>
+</deployment>
