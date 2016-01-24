@@ -1,0 +1,26 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "XmlInput"
+        },
+        "flowVariables": {
+            "source": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "Source"
+            },
+            "target": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "target"
+            }
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "XmlOutpu"
+        }
+    },
+    "id": "029d9612-8aff-4ceb-ac46-83efa5befad1",
+    "version": "5.2.0.0"
+}

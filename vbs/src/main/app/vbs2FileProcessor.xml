@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    
+
+
+    <flow name="vbs2FileProcessorFlow">
+       <!--  <file:inbound-endpoint path="${VBS.in}" moveToDirectory="${VBS.archive}" connector-ref="File" responseTimeout="10000" pollingFrequency="10000" moveToPattern="#[message.inboundProperties['originalFilename']]_#[function:datestamp]" doc:name="File"> -->
+        <file:inbound-endpoint path="${VBS.in}" moveToDirectory="${VBS.archive}" connector-ref="File" responseTimeout="10000" pollingFrequency="10000" moveToPattern="#[message.inboundProperties['originalFilename']]" doc:name="File">
+          <file:filename-wildcard-filter pattern="${VBS.filename}*.xml,${VBS.filename}*.XML,${VBS.filename}*.json,${VBS.filename}*.JSON, xml,${VBS.filename}*.xlsx, xml,${VBS.filename}*.XLSX"/>
+        </file:inbound-endpoint>
+        <set-variable variableName="fileName" value="#[message.inboundProperties['originalFilename']]" doc:name="fileName"/>
+        <choice doc:name="ChoiceFileType">
+          <when expression="#[(org.apache.commons.lang3.StringUtils.upperCase(flowVars.fileName)).contains('.XML')]">
+                <message-properties-transformer scope="invocation" doc:name="Message Properties For XML"> 
+				<add-message-property key="source" value="XML"></add-message-property>  
+				<add-message-property key="target" value="SOAP"></add-message-property>  
+				</message-properties-transformer>
+                <flow-ref name="vbsXML2XMLSubFlow" doc:name="vbsXML2XMLSubFlowRef"/>
+          </when>
+            <when expression="#[(org.apache.commons.lang3.StringUtils.upperCase(flowVars.fileName)).contains('.JSON')]">
+                <message-properties-transformer scope="invocation" doc:name="Message Properties For JSON"> 
+				<add-message-property key="source" value="JSON"></add-message-property>  
+				<add-message-property key="target" value="REST"></add-message-property>  
+				</message-properties-transformer>
+                <flow-ref name="vbsJSON2XMLSubFlow" doc:name="vbsJSON2XMLSubFlowRef"/>
+          </when>
+           <when expression="#[(org.apache.commons.lang3.StringUtils.upperCase(flowVars.fileName)).contains('.XLSX')]">
+                <message-properties-transformer scope="invocation" doc:name="Message Properties For XLS"> 
+				<add-message-property key="source" value="EXCEL"></add-message-property>  
+				<add-message-property key="target" value="FILE"></add-message-property>  
+				</message-properties-transformer>
+                <flow-ref name="vbsXLS2XMLSubFlow" doc:name="vbsXLS2XMLSubRef"/>
+          </when>
+          <otherwise>
+             <logger message="Not XML type" level="INFO" doc:name="Logger"/>
+          </otherwise>        
+        </choice>
+       
+        <message-properties-transformer scope="session" doc:name="Message Properties">
+		<add-message-property key="messageid" value="#[message:id]"/>	
+		<add-message-property key="hostserver" value="${General.hostserver}"/>
+		</message-properties-transformer>
+        
+        <db:insert config-ref="ESBDBDatabase" doc:name="Database">
+            <db:parameterized-query><![CDATA[insert into ESB.VBSMessages ([VBR],[Source] ,[Target] ,[Status] ,[ServerName] ,[mulemessageid] ,[MessageData])
+				values(
+				#[xpath('string(//VBLoad/VBLoadList/VB[1]/@VBR)')],
+				#[xpath('string(//VBLoad/VBLoadList/VB[1]/Source)')],
+				#[xpath('string(//VBLoad/VBLoadList/VB[1]/Target)')],
+				'New',
+				#[sessionVars.hostserver],				
+				#[sessionVars.messageid],
+				#[payload])]]></db:parameterized-query>
+	     </db:insert>  		
+        
+        
+        
+          <catch-exception-strategy doc:name="VBS_FileProcessor Catch Exception Strategy">
+		<message-properties-transformer scope="session" doc:name="Message Properties"> 
+		<add-message-property key="errorprocess" value="#['VBS']"></add-message-property>  
+		<add-message-property key="errormessage" value="#['Processing input files']"></add-message-property>  
+		<add-message-property key="erroradditionaltext" value="#[exception.cause.message]"></add-message-property> 
+		</message-properties-transformer>  
+		<vm:outbound-endpoint exchange-pattern="request-response" path="VBS.queue.VMError" doc:name="VMError"></vm:outbound-endpoint>  		
+		</catch-exception-strategy> 
+    </flow>
+    <sub-flow name="vbsXML2XMLSubFlow">      
+	     <byte-array-to-string-transformer doc:name="Byte-Array-to-String"/>
+        <dw:transform-message metadata:id="029d9612-8aff-4ceb-ac46-83efa5befad1" doc:name="XML2XML">
+            <dw:input-payload doc:sample="VBLoad.xml"/>
+            <dw:input-variable doc:sample="string.dwl" variableName="source"/>
+            <dw:input-variable doc:sample="string_1.dwl" variableName="target"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+---
+VBLoad: {
+	DateGenerated: payload.VBLoad.DateGenerated,
+VBLoadList: {(payload.VBLoad.VBLoadList.*VB map {
+	VB @(VBR: payload.VBLoad.VBLoadList.VB.@VBR): {		
+		VRN: $.VRN,
+		DateBooked: $.DateBooked,
+		TimeBooked: $.TimeBooked,
+		Amount: $.Amount,
+		Source: flowVars.source,
+		Target: flowVars.target
+	}
+}
+)}
+}
+]]></dw:set-payload>
+            <dw:set-variable variableName="OutXML"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+}]]></dw:set-variable>
+        </dw:transform-message>
+        
+        <object-to-string-transformer doc:name="Object to String"/>
+
+    </sub-flow>
+    
+      <sub-flow name="vbsJSON2XMLSubFlow">
+        <byte-array-to-string-transformer doc:name="Byte Array to String"/>
+        <dw:transform-message metadata:id="cfe17468-093f-4882-b875-97cb33a80e64" doc:name="JSON2XML">
+            <dw:input-payload doc:sample="json.json"/>
+            <dw:input-variable doc:sample="string_2.dwl" variableName="source"/>
+            <dw:input-variable doc:sample="string_3.dwl" variableName="target"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+---
+VBLoad: {
+	DateGenerated: payload.VBLoad.DateGenerated,
+VBLoadList: {(payload.VBLoad.VBLoadList.*VB map {
+	VB @(VBR: payload.VBLoad.VBLoadList.VB.VBR): {		
+		VRN: $.VRN,
+		DateBooked: $.DateBooked,
+		TimeBooked: $.TimeBooked,
+		Amount: $.Amount,
+		Source: flowVars.source,
+		Target: flowVars.target
+	}
+}
+)}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        
+        <object-to-string-transformer doc:name="Object to String"/>
+    </sub-flow>
+    
+    
+    
+      <sub-flow name="vbsXLS2XMLSubFlow">    
+      
+            <message-properties-transformer scope="session" doc:name="java object">
+			<add-message-property key="excelToXML" value="''"/>			
+			</message-properties-transformer>
+
+			<enricher target="#[sessionVars.excelToXML]" doc:name="Message Enricher" >
+			<invoke object-ref="BuildJavaObject" method="getExcelToXML" methodArguments="${VBS.working}\#[flowVars.fileName],#[flowVars.source],#[flowVars.target]" doc:name="BuildJavaObject"/>			  	 
+			</enricher>
+        <set-payload value="#[sessionVars.excelToXML]" mimeType="text/xml" doc:name="Set Payload"/>
+      
+            
+      </sub-flow>
+    
+    
+    
+</mule>
+
+
+
+  

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ws="http://www.mulesoft.org/schema/mule/ws"
+	xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
+    <flow name="vbs1GetXMLFilesFlow">
+  
+    
+     <poll doc:name="Poll">
+            <fixed-frequency-scheduler frequency="2" timeUnit="MINUTES"/>
+            <ws:consumer config-ref="Web_Service_Consumer" operation="getVBSDetails" doc:name="Web Service Consumer for get details"/>
+        </poll>
+          <mulexml:dom-to-xml-transformer doc:name="DOM to XML"/>
+        <dw:transform-message metadata:id="f06ab1a0-311e-48ed-b96d-a35774550ad1" doc:name="Transform Message">
+            <dw:input-payload doc:sample="getVBSDetailsResponse.xml"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+---
+{
+	VBLoad: {
+		DateGenerated: payload.getVBSDetailsResponse.VBLoad.DateGenerated,
+		VBLoadList: {(payload.getVBSDetailsResponse.VBLoad.VBLoadList.*VB map {
+			VB @(VBR: $.@VBR):{			
+			VRN: $.VRN,
+			DateBooked: $.DateBooked,
+			TimeBooked: $.TimeBooked,
+			Amount: $.Amount
+		}
+			
+		})}
+		
+	
+	
+}
+}
+]]></dw:set-payload>
+        </dw:transform-message>
+        <mulexml:dom-to-xml-transformer doc:name="DOM to XML"/>
+        <file:outbound-endpoint path="${VBS.in}" outputPattern="Vehicle_#[server.dateTime.format(&quot;ddMMyyyyhhmmss&quot;)].XML" connector-ref="File" responseTimeout="10000" doc:name="File"/>
+      
+      
+      
+      <catch-exception-strategy doc:name="VBS_GetXMLInputFiles Catch Exception Strategy">
+		<message-properties-transformer scope="session" doc:name="Message Properties"> 
+		<add-message-property key="errorprocess" value="#['VBS']"></add-message-property>  
+		<add-message-property key="errormessage" value="#['Getting XML inputfiles']"></add-message-property>  
+		<add-message-property key="erroradditionaltext" value="#[exception.cause.message]"></add-message-property> 
+		</message-properties-transformer>  
+		<vm:outbound-endpoint exchange-pattern="request-response" path="VBS.queue.VMError" doc:name="VMError"></vm:outbound-endpoint>  		
+		</catch-exception-strategy> 
+    </flow>
+    <flow name="vbs1GetJSONFilesFlow">
+    
+        <poll doc:name="Poll">
+            <fixed-frequency-scheduler frequency="2" timeUnit="MINUTES"/>
+            <http:request config-ref="REST_Request_Configuration" path="/" method="GET" doc:name="HTTP"/>
+            
+            
+         </poll>
+        <set-payload value="#[payload]" mimeType="application/json" doc:name="Set Payload"/>
+        <file:outbound-endpoint path="${VBS.in}" outputPattern="Vehicle_#[server.dateTime.format(&quot;ddMMyyyyhhmmss&quot;)].JSON" connector-ref="File" responseTimeout="10000" doc:name="File"/>
+    
+      <catch-exception-strategy doc:name="VBS_GetJSONInputFiles Catch Exception Strategy">
+		<message-properties-transformer scope="session" doc:name="Message Properties"> 
+		<add-message-property key="errorprocess" value="#['VBS']"></add-message-property>  
+		<add-message-property key="errormessage" value="#['Getting JSON inputfiles']"></add-message-property>  
+		<add-message-property key="erroradditionaltext" value="#[exception.cause.message]"></add-message-property> 
+		</message-properties-transformer>  
+		<vm:outbound-endpoint exchange-pattern="request-response" path="VBS.queue.VMError" doc:name="VMError"></vm:outbound-endpoint>  		
+		</catch-exception-strategy> 
+    
+    </flow>
+</mule>

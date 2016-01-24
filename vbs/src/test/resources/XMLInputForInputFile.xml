@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<getVBSDetailsResponse xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.nivi.com/VBSWS/">
+	<VBLoad xmlns="">
+		<DateGenerated>07-01-2016</DateGenerated>
+		<VBLoadList>
+			<VB VBR="100">
+				<VRN>A100</VRN>
+				<DateBooked>01-01-2016</DateBooked>
+				<TimeBooked>20:00</TimeBooked>
+				<Amount>100.00</Amount>
+			</VB>
+		</VBLoadList>
+	</VBLoad>
+</getVBSDetailsResponse>

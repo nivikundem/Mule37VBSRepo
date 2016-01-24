@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+<context:property-placeholder location="classpath:General.properties,classpath:DB.properties,classpath:VBS.properties,classpath:Email.properties"/>
+<file:connector name="File" autoDelete="true" streaming="true" validateConnections="true" doc:name="File" workDirectory="${VBS.working}" workFileNamePattern="#[message.inboundProperties['originalFilename']]"/>
+ <db:generic-config name="ESBDBDatabase" url="jdbc:sqlserver:${ESBData.server};user=${ESBData.user};password=${ESBData.password};databaseName=${ESBData.dbname};" driverClassName="com.microsoft.sqlserver.jdbc.SQLServerDriver" doc:name="Generic Database Configuration"/>
+ 
+   <http:request-config name="REST_Request_Configuration" host="${VBS.rest.host}" port="${VBS.rest.port}" basePath="${VBS.rest.basepath}" doc:name="HTTP Request Configuration"/>
+ <configuration doc:name="Configuration">
+ <expression-language>
+ <import class="org.apache.commons.lang3.StringUtils" />
+ </expression-language>
+</configuration>
+
+	<spring:beans>	
+		
+		<spring:bean id="BuildJavaObject" name="BuildJavaObject" class="com.vbs.component.BuildJavaObject"/>		
+	</spring:beans>
+	
+	  <choice-exception-strategy name="globalChoice_Exception_Strategy">
+        <catch-exception-strategy when="#[exception.causedBy(org.mule.api.expression.ExpressionRuntimeException)]" doc:name="Catch Expression Exceptions">
+            <set-payload value="#['Application currently unavailable']" doc:name="Set Payload"/>
+            <logger level="INFO" doc:name="Logger"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy doc:name="Catch all other exception">
+            <set-payload value="#['Data is currently unavailable']" doc:name="Set Payload"/>
+            <logger level="INFO" doc:name="Logger"/>
+        </catch-exception-strategy>
+    </choice-exception-strategy>
+	
+
+</mule>

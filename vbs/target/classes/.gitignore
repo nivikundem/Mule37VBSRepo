@@ -1,0 +1,15 @@
+/DB.properties
+/Email.properties
+/General.properties
+/VBRestInput.xsd
+/VBS.properties
+/VBSPort.wsdl
+/com/
+/log4j2.xml
+/mule-app.properties
+/mule-deploy.properties
+/vbs1GetInputFiles.xml
+/vbs2FileProcessor.xml
+/vbs3MessageProcessor.xml
+/vbs4ErrorInsertVM.xml
+/vbs99999Global.xml

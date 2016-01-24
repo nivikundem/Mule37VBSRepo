@@ -1,0 +1,12 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+          <!-- XML Schema Generated from XML Document on Thu Jan 21 2016 09:50:42 GMT+0000 (GMT Standard Time) -->
+          <!-- with XmlGrid.net Free Online Service http://xmlgrid.net -->
+       <xs:element name="VBRestInput">
+              <xs:complexType>
+                     <xs:sequence>
+                            <xs:element name="VBR" type="xs:int"></xs:element>
+                            <xs:element name="VRN" type="xs:string"></xs:element>
+                        </xs:sequence>
+                 </xs:complexType>
+          </xs:element>
+   </xs:schema>

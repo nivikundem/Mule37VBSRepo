@@ -1,0 +1,14 @@
+{
+    "VBLoad": {
+        "DateGenerated": "07-01-2016",
+		"VBLoadList": {           		
+                "VB": {
+                    "VBR": "100",
+					"VRN": "A100",
+					"DateBooked": "01-01-2016",
+					"TimeBooked": "09:15",
+					"Amount": "20.00"
+                }
+            }        
+		}
+}

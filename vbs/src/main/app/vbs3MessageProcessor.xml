@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml"
+	xmlns:ws="http://www.mulesoft.org/schema/mule/ws" xmlns:cxf="http://www.mulesoft.org/schema/mule/cxf" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/cxf http://www.mulesoft.org/schema/mule/cxf/current/mule-cxf.xsd
+http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+       <ws:consumer-config name="Web_Service_Consumer" wsdlLocation="http://localhost:8080/VBSSoap/services/VBSPort?WSDL" service="VBSWS" port="VBSPort" serviceAddress="http://localhost:8080/VBSSoap/services/VBSPort?WSDL" doc:name="Web Service Consumer"/>
+    <mulexml:jaxb-context name="JAXB_Context" packageNames="com.vbs.org.rest" doc:name="JAXB Context"/>
+   
+   
+    <flow name="vbs3MessageProcessorFlow">
+
+
+        <poll doc:name="Poll">
+		<fixed-frequency-scheduler frequency="${VBS.sourceDbPollingFreq}"/>
+            <db:select config-ref="ESBDBDatabase" doc:name="Database">
+                <db:parameterized-query><![CDATA[SELECT TOP 1 [VBSMessages_ID]
+		FROM [ESB].[VBSMessages] MSG1 WITH(NOLOCK)
+		where MSG1.[Status] in ('New','Retry')]]></db:parameterized-query>
+            </db:select>
+		</poll>
+
+		<expression-filter expression="#[payload.size()&gt;0]" doc:name="Only if rows"/>
+
+        <message-properties-transformer scope="session" doc:name="Mule Msg ID">	
+		<add-message-property key="vbsMessages" value="#[new ArrayList()]"/>
+		<add-message-property key="excelFolder" value="${VBS.out.excel.folder}"/>		
+		</message-properties-transformer>
+	
+        <enricher target="#[sessionVars.vbsMessages]" doc:name="Message Enricher" >
+		<db:select config-ref="ESBDBDatabase" doc:name="Get Records">
+		<db:parameterized-query><![CDATA[SELECT TOP 10  [VBSMessages_ID] ,[VBR],[Source],[Target] ,[Status] ,[mulemessageid],[MessageData]
+		FROM [ESB].[VBSMessages] MSG1 WITH(NOLOCK)
+		where MSG1.[Status] in ('New','Retry')]]></db:parameterized-query>
+		</db:select>
+		</enricher>
+
+        <foreach collection="#[sessionVars.vbsMessages]" doc:name="For Each">  
+            <set-variable variableName="mMID" value="#[payload.mulemessageid]" doc:name="Variable"/>
+          <choice doc:name="ChoiceTargetType">
+	          <when expression="#[payload.Target =='REST']">                                    
+                    <set-payload value="#[payload.MessageData]" doc:name="Set JSON Payload" mimeType="application/xml"/>
+                    <flow-ref name="vbs3XMLToJSON" doc:name="vbs3XMLToJSON"/>	               	                
+	          </when>
+	          
+	          <when expression="#[payload.Target =='FILE']">
+                    <set-payload value="#[payload.MessageData]" doc:name="Set EXCEL Payload" mimeType="application/xml"/>
+                    <flow-ref name="vbs3XMLToEXCEL" doc:name="vbs3XMLToEXCEL"/>	                               
+	          </when>
+	          
+	             
+	          <when expression="#[payload.Target =='SOAP']">	              
+                    <set-payload value="#[payload.MessageData]" doc:name="Set XML Payload" mimeType="application/xml"/>
+                    <flow-ref name="vbs3XMLToXML" doc:name="vbs3XMLToXML"/>
+               </when>
+	          
+          <otherwise>
+               <logger message="XML type UNKNOWN::: #[payload.Target]" level="INFO" doc:name="Logger"/>
+          </otherwise>          
+               
+          </choice>
+          
+           <db:update config-ref="ESBDBDatabase" doc:name="Database">
+                <db:parameterized-query><![CDATA[update [ESB].[VBSMessages]
+		set Status='Processed',ErrorText='VBS'
+		,DateUpdated=CURRENT_TIMESTAMP
+		where mulemessageid = #[flowVars.mMID]]]></db:parameterized-query>
+            </db:update>
+          
+        
+        </foreach>
+        
+        
+          <catch-exception-strategy doc:name="VBS_MessageProcessor Catch Exception Strategy">
+		<message-properties-transformer scope="session" doc:name="Message Properties"> 
+		<add-message-property key="errorprocess" value="#['VBS']"></add-message-property>  
+		<add-message-property key="errormessage" value="#['Message Processor']"></add-message-property>  
+		<add-message-property key="erroradditionaltext" value="#[exception.cause.message]"></add-message-property> 
+		</message-properties-transformer>  
+		<vm:outbound-endpoint exchange-pattern="request-response" path="VBS.queue.VMError" doc:name="VMError"></vm:outbound-endpoint>  		
+		</catch-exception-strategy> 
+       
+    </flow>
+ <!--    <sub-flow name="vbs3XMLToJSON">
+      
+        <logger message="After calling the rest call ::: #[payload]" level="INFO" doc:name="Logger"/>
+        <json:json-to-object-transformer returnClass="java.util.Map" doc:name="JSON to Object"/>
+        
+        <choice>
+            <when expression="#[message.payload is java.util.list]">
+                   <logger message="logger 2  #[message.payload] " level="INFO" doc:name="Logger"/>
+            </when>
+            <otherwise>
+                      <logger message="logger 4  nivi kundem  #[message.payload] " level="INFO" doc:name="Logger"/>
+            </otherwise>
+        </choice>
+    </sub-flow> -->
+    
+    <sub-flow name="vbs3XMLToJSON">
+        <dw:transform-message metadata:id="20cdaaf3-cd8c-4003-84ae-5478970e89b1" doc:name="DWForXMLToJSON">
+            <dw:input-payload doc:sample="VBLoad_1.xml"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+VBLoad: {
+	DateGenerated: payload.VBLoad.DateGenerated,
+	VBLoadList: {(payload.VBLoad.VBLoadList.*VB map {
+		VB:{
+			VBR: payload.VBLoad.VBLoadList.VB.@VBR,
+			VRN: $.VRN,
+			DateBooked: $.DateBooked,
+			TimeBooked: $.TimeBooked,
+			Amount: $.Amount
+		}
+		
+	})
+}
+}
+]]></dw:set-payload>
+        </dw:transform-message>
+
+         <object-to-string-transformer doc:name="Object to String"/>
+        <logger message="After calling the rest call ::: #[payload]" level="INFO" doc:name="Logger"/>
+ 
+  
+  
+ <!--  
+  
+   <json:json-to-object-transformer returnClass="java.util.Map" doc:name="JSON to Object"/>
+        
+        <choice>
+            <when expression="#[message.payload is java.util.List]">
+                   <logger message="logger 2  #[message.payload] " level="INFO" doc:name="Logger"/>
+            </when>
+            <otherwise>
+                      <logger message="logger 4  nivi kundem  #[message.payload] " level="INFO" doc:name="Logger"/>
+            </otherwise>
+        </choice>
+   -->
+  
+  
+  
+  
+  
+    </sub-flow>
+ 
+    
+    <sub-flow name="vbs3XMLToEXCEL">
+      	<component class="com.vbs.component.BuildVBSExcel" doc:name="BuildVBSEXCEL"/>  
+    </sub-flow>
+    
+    
+      <sub-flow name="vbs3XMLToXML">
+        <dw:transform-message metadata:id="373a85ab-eb4b-47b3-8cf2-10a93e395731" doc:name="DWXMLToXML">
+            <dw:input-payload doc:sample="VBLoad_2.xml"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace vbs http://www.nivi.com/VBSWS/
+---
+{
+	vbs#sendVBSDetails: {
+		VBLoad:{
+			DateGenerated: payload.VBLoad.DateGenerated,
+			VBLoadList: {(payload.VBLoad.VBLoadList.*VB map {
+		VB @(VBR: $.@VBR):{
+			
+			VRN: $.VRN,
+			DateBooked: $.DateBooked,
+			TimeBooked: $.TimeBooked,
+			Amount: $.Amount
+		}
+		
+	})
+}
+		
+	
+       }
+		
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        
+        
+        <ws:consumer config-ref="Web_Service_Consumer" operation="sendVBSDetails" doc:name="Web Service Consumer"/>
+          <mulexml:dom-to-xml-transformer doc:name="DOM to XML"/>      
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+        
+    </sub-flow>
+    
+    
+</mule>
